@@ -1,0 +1,168 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <title>Chat Room</title>
+  <style>
+    body {
+    margin: 0;
+    font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
+    background: url("images/background.jpg") no-repeat center center fixed;
+    background-size: 150%;   /* zoom in 150% */
+    height: 100vh;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    color: #fff;
+}
+    .chat-container {
+      width: 420px;
+      height: 600px;
+      background: #1a1a2e;
+      border-radius: 12px;
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+      box-shadow: 0px 0px 15px rgba(255, 105, 180, 0.4);
+    }
+    .chat-header {
+      background: linear-gradient(90deg, #ff66cc, #cc33ff);
+      padding: 15px;
+      text-align: center;
+      font-weight: bold;
+      font-size: 18px;
+      color: #111;
+    }
+    .messages {
+      flex: 1;
+      padding: 15px;
+      overflow-y: auto;
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+    .bubble {
+      max-width: 70%;
+      padding: 10px 15px;
+      border-radius: 15px;
+      line-height: 1.4;
+      word-wrap: break-word;
+      font-size: 14px;
+    }
+    .me {
+      align-self: flex-end;
+      background: #ff66cc;
+      color: #111;
+      border-bottom-right-radius: 3px;
+    }
+    .other {
+      align-self: flex-start;
+      background: #333;
+      color: #fff;
+      border-bottom-left-radius: 3px;
+    }
+    .system {
+      text-align: center;
+      font-size: 12px;
+      color: #aaa;
+    }
+    .input-area {
+      display: flex;
+      border-top: 1px solid #444;
+      background: #111;
+    }
+    .input-area input {
+      flex: 1;
+      padding: 12px;
+      border: none;
+      outline: none;
+      background: #111;
+      color: #fff;
+      font-size: 14px;
+    }
+    .input-area button {
+      background: #cc33ff;
+      border: none;
+      padding: 12px 20px;
+      cursor: pointer;
+      color: #fff;
+      font-weight: bold;
+      transition: 0.3s;
+    }
+    .input-area button:hover {
+      background: #ff66cc;
+    }
+  </style>
+</head>
+<body>
+  <div class="chat-container">
+    <div class="chat-header">💬 Chat Room</div>
+    <div id="messages" class="messages"></div>
+    <div class="input-area">
+      <input id="msg" placeholder="Type a message..." />
+      <button onclick="sendMsg()">Send</button>
+    </div>
+  </div>
+
+  <script>
+    let ws;
+    const messagesDiv = document.getElementById("messages");
+    const input = document.getElementById("msg");
+
+    const username = prompt("Choose a username:");
+    const room = prompt("Room to join:");
+
+    function addMessage(text, type = "other") {
+      const div = document.createElement("div");
+      if (type === "system") {
+        div.className = "system";
+        div.textContent = text;
+      } else {
+        div.className = "bubble " + type;
+        div.textContent = text;
+      }
+      messagesDiv.appendChild(div);
+      messagesDiv.scrollTop = messagesDiv.scrollHeight;
+    }
+
+    ws = new WebSocket("ws://localhost:6789");
+
+    ws.onopen = () => {
+      ws.send(username + ":" + room);
+      addMessage("✅ Connected to " + room, "system");
+    };
+
+    ws.onmessage = (event) => {
+      const msg = event.data;
+
+      // System messages
+      if (msg.startsWith("🔵") || msg.startsWith("❌")) {
+        addMessage(msg, "system");
+      } 
+      // Other users' messages
+      else if (!msg.startsWith(username + ":")) {
+        addMessage(msg, "other");
+      }
+      // If it’s your message echoed back -> ignore (already shown instantly)
+    };
+
+    function sendMsg() {
+      if (input.value.trim() !== "") {
+        const message = input.value.trim();
+
+        // Show immediately on sender's screen
+        addMessage("You: " + message, "me");
+
+        // Send to server
+        ws.send(message);
+
+        input.value = "";
+      }
+    }
+
+    input.addEventListener("keypress", (e) => {
+      if (e.key === "Enter") sendMsg();
+    });
+  </script>
+</body>
+</html>
